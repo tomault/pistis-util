@@ -199,6 +199,10 @@ namespace pistis {
 					      begin_ + end, allocator());
       }
 
+      auto ImmutableList<Item, Allocator>(size_t start) const {
+	return this->subList(start, this->size());
+      }
+      
       template <typename Function,
 		typename Result = decltype((*(Function*)0)(*(Item*)0)),
 	        typename ResultAllocator =

@@ -21,59 +21,76 @@ namespace {
 
   inline std::string toStr(bool v) { return v ? "true" : "false"; }
 
+  template <typename T>
+  inline std::unique_ptr<T> make_result(const T& result) {
+    return std::unique_ptr<T>(new T(result));
+  }
+  
+
   template <typename Item, typename Allocator>
-  ::testing::AssertionResult verifyListAccessors(
-      ::testing::AssertionResult prior,
+  std::unique_ptr<::testing::AssertionResult> verifyListAccessors(
+      std::unique_ptr<::testing::AssertionResult> prior,
       const std::vector<Item>& truth,
       const ImmutableList<Item, Allocator>& list
   ) {
-    if (!prior) {
-      return prior;
+    if (!*prior) {
+      return std::move(prior);
     }
     if (truth.empty() != list.empty()) {
-      return ::testing::AssertionFailure()
-	  << "truth.empty() != list.empty() [ " << toStr(truth.empty())
-	  << " != " << toStr(list.empty()) << " ]";
+      return make_result(
+	  ::testing::AssertionFailure()
+	    << "truth.empty() != list.empty() [ " << toStr(truth.empty())
+	    << " != " << toStr(list.empty()) << " ]"
+      );
     }
     if (truth.size() != list.size()) {
-      return ::testing::AssertionFailure()
-	<< "truth.size() != list.size() [ " << truth.size() << " != "
-	  << list.size() << " ]";
+      return make_result(
+	  ::testing::AssertionFailure()
+	      << "truth.size() != list.size() [ " << truth.size() << " != "
+	      << list.size() << " ]"
+      );
     }
 
     // list.size() == truth.size() by prior assertion
     if (!list.size()) {
       // Don't check front() and back()
     } else if (truth.front() != list.front()) {
-      return ::testing::AssertionFailure()
-	<< "truth.front() != list.front() [ " << truth.front() << " != "
-	<< list.front() << " ]";
+      return make_result(
+	  ::testing::AssertionFailure()
+	      << "truth.front() != list.front() [ " << truth.front() << " != "
+	      << list.front() << " ]"
+      );
     } else if (truth.back() != list.back()) {
-      return ::testing::AssertionFailure()
-	<< "truth.back() != list.back() [ " << truth.back() << " != "
-	<< list.back() << " ]";
+      return make_result(
+	   ::testing::AssertionFailure()
+	       << "truth.back() != list.back() [ " << truth.back() << " != "
+	       << list.back() << " ]"
+      );
     }
-    return ::testing::AssertionSuccess();
+    return make_result(::testing::AssertionSuccess());
   }
   
   template <typename ListIterator, typename TruthIterator>
-  ::testing::AssertionResult verifyRange(
-      ::testing::AssertionResult prior, TruthIterator truthBegin,
+  std::unique_ptr<::testing::AssertionResult> verifyRange(
+      std::unique_ptr<::testing::AssertionResult> prior,
+      TruthIterator truthBegin,
       ListIterator listBegin, ListIterator listEnd) {
-    if (!prior) {
-      return prior;
+    if (!*prior) {
+      return std::move(prior);
     }
     
     auto i = truthBegin;
     uint32_t ndx = 0;
     for (auto j = listBegin; j != listEnd; ++i, ++j, ++ndx) {
       if (*i != *j) {
-	return ::testing::AssertionFailure()
-	  << "truth[" << ndx << "] (which is " << *i << " ) != list["
-	  << ndx << "] (which is " << *j << ")";
+	return make_result(
+	    ::testing::AssertionFailure()
+	       << "truth[" << ndx << "] (which is " << *i << " ) != list["
+	       << ndx << "] (which is " << *j << ")"
+	);
       }
     }
-    return ::testing::AssertionSuccess();
+    return make_result(::testing::AssertionSuccess());
   }
   
   template <typename Item, typename Allocator>
@@ -81,13 +98,16 @@ namespace {
       const std::vector<Item>& truth,
       const ImmutableList<Item, Allocator>& list
   ) {
-    ::testing::AssertionResult result = ::testing::AssertionSuccess();
+    std::unique_ptr<::testing::AssertionResult> result =
+        make_result(::testing::AssertionSuccess());
 
-    result = verifyListAccessors(result, truth, list);
-    result = verifyRange(result, truth.begin(), list.begin(), list.end());
-    result = verifyRange(result, truth.cbegin(), list.cbegin(), list.cend());
+    result = verifyListAccessors(std::move(result), truth, list);
+    result = verifyRange(std::move(result), truth.begin(), list.begin(),
+			 list.end());
+    result = verifyRange(std::move(result), truth.cbegin(), list.cbegin(),
+			 list.cend());
     
-    return result;
+    return *result;
   }
 }
 
