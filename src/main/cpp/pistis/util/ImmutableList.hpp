@@ -76,9 +76,7 @@ namespace pistis {
 	  members_(
 	      std::allocator_traits<Allocator>::allocate(*this,
 							 n * sizeof(Item)),
-	      [this](Item* p) {
-		cleanUp_(*this, p, p + this->size());
-	      }
+	      ImmutableList::Cleaner(allocator, n)
 	  ),
 	  begin_(members_.get()), end_(begin_ + n) {
 	for (auto p = begin_; p != end_; ++p) {
@@ -100,9 +98,7 @@ namespace pistis {
 	  members_(
 	      std::allocator_traits<Allocator>::allocate(*this,
 							 n * sizeof(Item)),
-	      [this](Item* p) {
-		cleanUp_(*this, p, p + this->size());
-	      }
+	      ImmutableList::Cleaner(allocator, n)
 	  ),
 	  begin_(members_.get()), end_(begin_ + n) {
 	auto i = members;
@@ -199,8 +195,53 @@ namespace pistis {
 					      begin_ + end, allocator());
       }
 
-      auto ImmutableList<Item, Allocator>(size_t start) const {
-	return this->subList(start, this->size());
+      ImmutableList<Item, Allocator> sublist(size_t start) const {
+	return this->sublist(start, this->size());
+      }
+      
+      ImmutableList<Item, Allocator> butLast(size_t n) const {
+	if (n > size()) {
+	  throw pistis::exceptions::IllegalValueError("\"n\" is out of range",
+						      PISTIS_EX_HERE);
+	}
+	return sublist(0, size() - n);
+      }
+      
+      template <typename OtherAllocator>
+      ImmutableList<Item, Allocator> concat(
+	  const ImmutableList<Item, OtherAllocator>& l
+      ) const {
+	return ImmutableList(size() + l.size(), JoinListsIterator(*this, l),
+			     allocator());
+      }
+
+      ImmutableList<Item, Allocator> add(const Item& x) const {
+	return ImmutableList(size() + 1, AddItemAtEndIterator(*this, x),
+			     allocator());
+      }
+
+      ImmutableList<Item, Allocator> insert(size_t pos, const Item& x) const {
+	return ImmutableList(size() + 1,
+			     AddItemAtPositionIterator(*this, x, pos),
+			     allocator());
+      }
+
+      ImmutableList<Item, Allocator> remove(size_t n) const {
+	return ImmutableList(size() - 1, SkipItemAtPositionIterator(*this, n),
+			     allocator());
+      }
+
+      ImmutableList<Item, Allocator> replace(ConstIterator p,
+					     const Item& x) const {
+	return ImmutableList(size(), ReplaceItemAtPositionIterator(*this, x, p),
+			     allocator());
+      }
+
+      ImmutableList<Item, Allocator> replace(size_t n, const Item& x) const {
+	return ImmutableList(size(),
+			     ReplaceItemAtPositionIterator(*this, x,
+							   begin() + n),
+			     allocator());
       }
       
       template <typename Function,
@@ -285,6 +326,133 @@ namespace pistis {
 	std::allocator_traits<Allocator>::deallocate(allocator, begin,
 						     end - begin);
       }
+
+      class Cleaner : public Allocator {
+      public:
+	Cleaner(const Allocator& allocator, size_t n):
+	    Allocator(allocator), n_(n) {
+	}
+
+	void operator()(Item* p) { cleanUp_(*this, p, p + n_); }
+
+      private:
+	size_t n_;
+      };
+      
+      class OneItemIterator {
+      public:
+	OneItemIterator(const ImmutableList& source, const Item& item):
+	    src_(source), item_(item), p_(source.begin()) {
+	}
+
+	const Item& operator*() const { return *p_; }
+	OneItemIterator& operator++() { ++p_; return *this; }
+
+      protected:
+	const ImmutableList& src_;
+	const Item& item_;
+	ImmutableList::ConstIterator p_;
+      };
+      
+      class AddItemAtEndIterator : public OneItemIterator {
+      public:
+	AddItemAtEndIterator(const ImmutableList& source, const Item& item):
+	    OneItemIterator(source, item) {
+	}
+
+	const Item& operator*() const {
+	  return (this->p_ == this->src_.end()) ? this->item_ : *(this->p_);
+	}
+      };
+      
+      class AddItemAtPositionIterator : public OneItemIterator {
+      public:
+	AddItemAtPositionIterator(const ImmutableList& source, const Item& item,
+				  size_t position):
+	    OneItemIterator(source, item), cnt_(position) {
+	}
+
+	const Item& operator*() const {
+	  return cnt_ ? *(this->p_) : (this->item_);
+	}
+	
+	AddItemAtPositionIterator& operator++() {
+	  if (cnt_) {
+	    ++(this->p_);
+	  }
+	  --cnt_;
+	}
+	
+      private:
+	size_t cnt_;
+      };
+
+      class SkipItemAtPositionIterator {
+      public:
+	SkipItemAtPositionIterator(const ImmutableList& source,
+				   size_t position):
+	    src_(source),
+	    p_(position ? source.begin() : source.begin() + 1),
+	    skip_(p_ + position) {
+	}
+
+	const Item& operator*() const { return *p_; }
+	
+	SkipItemAtPositionIterator& operator++() {
+	  ++p_;
+	  if (p_ == skip_) {
+	    ++p_;
+	  }
+	  return *this;
+	}
+
+      private:
+	const ImmutableList& src_;
+	ImmutableList::ConstIterator p_;
+	ImmutableList::ConstIterator skip_;
+      };
+
+      class ReplaceItemAtPositionIterator : public OneItemIterator {
+      public:
+	ReplaceItemAtPositionIterator(
+	    const ImmutableList& source,
+	    const Item& item,
+	    const ImmutableList::ConstIterator position
+	):
+	    OneItemIterator(source, item), replace_(position) {
+	}
+
+	const Item& operator*() const {
+	  return (this->p_ == replace_) ? this->item_ : *(this->p_);
+	}
+
+      private:
+	ImmutableList::ConstIterator replace_;
+      };
+
+      class JoinListsIterator {
+      public:
+	JoinListsIterator(const ImmutableList& list1,
+			  const ImmutableList& list2):
+	    list1_(list1), list2_(list2),
+	    p_(list1.size() ? list1_.begin() : list2.begin()) {
+	}
+
+	const Item& operator*() const { return *p_; }
+
+	JoinListsIterator& operator++() {
+	  ++p_;
+	  if (p_ == list1_.end()) {
+	    p_ = list2_.begin();
+	  }
+	  return *this;
+	}
+	
+      private:
+	const ImmutableList& list1_;
+	const ImmutableList& list2_;
+	ImmutableList::ConstIterator p_;
+      };
     };
 
   }

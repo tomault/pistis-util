@@ -207,6 +207,74 @@ TEST(ImmutableListTests, Sublist) {
   EXPECT_THROW(list.sublist( 7,  3), IllegalValueError);
 }
 
+TEST(ImmutableListTests, Concat) {
+  const TestAllocator allocator("TEST_1");
+  const TrueList trueConcatenated{ 5, 4, 2, 7, 1, 9, 4 };
+  UInt32List list1{ { 5, 4, 2, 7 }, allocator };
+  UInt32List list2{ { 1, 9, 4 }, allocator };
+  UInt32List empty{ allocator };
+  UInt32List concatenated = list1.concat(list2);
+
+  EXPECT_EQ(allocator.name(), concatenated.allocator().name());
+  EXPECT_TRUE(verifyList(trueConcatenated, concatenated));
+  EXPECT_TRUE(verifyList(TrueList{ 5, 4, 2, 7 }, list1.concat(empty)));
+  EXPECT_TRUE(verifyList(TrueList{ 5, 4, 2, 7 }, empty.concat(list1)));
+  EXPECT_TRUE(verifyList(TrueList{ 1, 9, 4 }, list2.concat(empty)));
+  EXPECT_TRUE(verifyList(TrueList{ 1, 9, 4 }, empty.concat(list2)));
+}
+
+TEST(ImmutableListTests, Add) {
+  const TestAllocator allocator("TEST_1");
+  const TrueList trueOriginal{ 5, 4, 2, 7 };
+  const TrueList trueAddedToEnd{ 5, 4, 2, 7, 3 };
+  UInt32List list{ { 5, 4, 2, 7 }, allocator };
+  UInt32List empty{ allocator };
+
+  EXPECT_TRUE(verifyList(trueAddedToEnd, list.add(3)));
+  EXPECT_TRUE(verifyList(trueOriginal, list));
+  EXPECT_TRUE(verifyList(TrueList{ 10 }, empty.add(10)));
+}
+
+TEST(ImmutableListTests, Insert) {
+  const TestAllocator allocator("TEST_1");
+  const TrueList trueAddedAtStart{ 6, 5, 4, 2, 7 };
+  const TrueList trueAddedInMiddle{ 5, 4, 1, 2, 7 };
+  const TrueList trueAddedAtEnd{ 5, 4, 2, 7, 9 };
+  UInt32List list{ { 5, 4, 2, 7 }, allocator };
+  UInt32List empty{ allocator };
+
+  EXPECT_TRUE(verifyList(trueAddedAtStart, list.insert(0, 6)));
+  EXPECT_TRUE(verifyList(trueAddedInMiddle, list.insert(2, 1)));
+  EXPECT_TRUE(verifyList(trueAddedAtEnd, list.insert(4, 9)));
+  EXPECT_TRUE(verifyList(TrueList{ 10 }, empty.insert(0, 10)));
+}
+
+TEST(ImmutableListTests, Remove) {
+  const TestAllocator allocator("TEST_1");
+  const TrueList trueRemovedAtStart{ 4, 2, 7 };
+  const TrueList trueRemovedInMiddle{ 5, 4, 7 };
+  const TrueList trueRemovedAtEnd{ 5, 4, 2 };
+  UInt32List list{ { 5, 4, 2, 7 }, allocator };
+  UInt32List oneItem{ { 10 }, allocator };
+
+  EXPECT_TRUE(verifyList(trueRemovedAtStart, list.remove(0)));
+  EXPECT_TRUE(verifyList(trueRemovedInMiddle, list.remove(2)));
+  EXPECT_TRUE(verifyList(trueRemovedAtEnd, list.remove(4)));
+  EXPECT_TRUE(verifyList(TrueList{ }, oneItem.remove(0)));
+}
+
+TEST(ImmutableListTests, Replace) {
+  const TestAllocator allocator("TEST_1");
+  const TrueList trueReplacedAtStart{ 6, 4, 2, 7 };
+  const TrueList trueReplacedInMiddle{ 5, 4, 9, 7 };
+  const TrueList trueReplacedAtEnd{ 5, 4, 2, 1 };
+  UInt32List list{ { 5, 4, 2, 7 }, allocator };
+
+  EXPECT_TRUE(verifyList(trueReplacedAtStart, list.replace((size_t)0, 6)));
+  EXPECT_TRUE(verifyList(trueReplacedInMiddle, list.replace(2, 9)));
+  EXPECT_TRUE(verifyList(trueReplacedAtEnd, list.replace(3, 1)));
+}
+
 TEST(ImmutableListTests, Map) {
   const TestAllocator allocator("TEST_1");
   const std::vector<std::string> truth{ "5", "2", "7", "13" };
