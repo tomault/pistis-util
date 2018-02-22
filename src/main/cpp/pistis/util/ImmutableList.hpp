@@ -158,6 +158,7 @@ namespace pistis {
       
       const Item& front() const noexcept { return begin_[0]; }
       const Item& back() const noexcept { return end_[-1]; }
+      const Item& back(size_t n) const noexcept { return *(end_ - n - 1); }
       const Item& at(size_t n) const {
 	const Item* p = begin_ + n;
 	if (p < end_) {

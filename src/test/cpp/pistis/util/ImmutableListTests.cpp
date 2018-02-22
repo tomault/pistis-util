@@ -180,6 +180,17 @@ TEST(ImmutableListTests, CreateFromCopy) {
   EXPECT_TRUE(verifyList(truth, list));
 }
 
+TEST(ImmutableListTests, Back) {
+  const std::vector<uint32_t> DATA{ 3, 2, 1, 4 };
+  UInt32List list(DATA.begin(), DATA.end());
+
+  EXPECT_EQ(4, list.back());
+  EXPECT_EQ(4, list.back(0));
+  EXPECT_EQ(1, list.back(1));
+  EXPECT_EQ(2, list.back(2));
+  EXPECT_EQ(3, list.back(3));
+}
+
 TEST(ImmutableListTests, At) {
   const std::vector<uint32_t> DATA{ 3, 2, 1, 4 };
   UInt32List list(DATA.begin(), DATA.end());
