@@ -12,7 +12,7 @@ namespace pistis {
     public:
       typedef BaseIterator BaseIteratorType;
       typedef decltype(**(BaseIterator*)0) DereferenceType;
-      typedef typename pistis::typeutil::RemoveQualifiers<DereferenceType>::type
+      typedef typename pistis::typeutil::RemoveCVR<DereferenceType>::type
               ValueType;
 
       typedef std::forward_iterator_tag iterator_category;

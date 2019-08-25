@@ -15,7 +15,7 @@ namespace pistis {
       typedef BaseIterator BaseIteratorType;
       typedef Function MappingFunction;
 
-      typedef typename pistis::typeutil::RemoveQualifiers<
+      typedef typename pistis::typeutil::RemoveCVR<
 	  decltype((*(Function*)0)(**(BaseIterator*)0))
       >::type ValueType;
       typedef ValueType DereferenceType;
