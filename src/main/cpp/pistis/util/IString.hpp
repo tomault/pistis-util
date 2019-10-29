@@ -868,8 +868,9 @@ namespace pistis {
 	  const size_t maxSplits = MAX_SPLITS
       ) const {
 	return RegexIStringSplitStream<CharType, CharTraits, Allocator,
-				       RegexTraits>(*this, separator,
-						    maxSplits);
+				       RegexTraits>(
+	    *this, separator, maxSplits
+	);
       }
       
       ImmutableString& operator=(const ImmutableString&) = default;
