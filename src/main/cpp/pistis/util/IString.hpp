@@ -7,6 +7,7 @@
 #include <pistis/util/IStringSplitStream.hpp>
 #include <algorithm>
 #include <cctype>
+#include <functional>
 #include <iostream>
 #include <iterator>
 #include <memory>
@@ -199,6 +200,15 @@ namespace pistis {
       
       size_t size() const { return end_ - begin_; }
       const Char* data() const { return begin_; }
+
+      size_t hash() const {
+	size_t h = 5381;
+	
+	for (const Char* p = begin_; p != end_; ++p) {
+	  h = (h << 5) + h + (size_t)*p;
+	}
+	return h;
+      }
       
       ConstIterator begin() const { return ConstIterator(begin_); }
       ConstIterator end() const { return ConstIterator(end_); }
@@ -1559,6 +1569,19 @@ namespace pistis {
       return WIString::literal(s, n);
     }
   }
+}
+
+namespace std {
+
+  template<typename Char, typename CharTraits, typename Allocator>
+  struct hash< pistis::util::ImmutableString<Char, CharTraits, Allocator> > {
+    size_t operator()(
+	const pistis::util::ImmutableString<Char, CharTraits, Allocator>& s
+    ) const {
+      return s.hash();
+    }
+  };
+  
 }
 
 #endif

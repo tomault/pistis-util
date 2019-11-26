@@ -199,6 +199,13 @@ TEST(IStringTests, CreateByCopyingStringOfOtherCharType) {
   EXPECT_EQ(TEXT, s);
 }
 
+TEST(IStringTests, Hash) {
+  std::hash<IString> h;
+  IString s("abcde");
+
+  EXPECT_EQ((size_t)210706217108, h(s));
+}
+
 TEST(IStringTests, Compare) {
   IString s1("arr");
   IString s2("arrest");
